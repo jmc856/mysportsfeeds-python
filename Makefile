@@ -1,4 +1,4 @@
 # Makefile
 
-install:
+build:
 	pip install -r requirements.txt
