@@ -1,0 +1,6 @@
+{
+  "version": "1.0",
+  "sports": ["nhl", "nba", "nfl", "mlb"],
+  "season_type": ["regular", "playoff", "current", "latest"],
+  "storage": ["standard", "memory"]
+}
