@@ -1,4 +1,5 @@
 import os
+import csv
 import ConfigParser
 import requests
 from datetime import datetime
@@ -66,9 +67,14 @@ class BaseFeed():
         self.config = None
 
     def make_base_url(self):
-        self.base_url = "https://www.mysportsfeeds.com/api/feed/pull/{sport}/{season}-{season_type}".format(sport=self.sport,
-                                                                                                            season=self.season,
-                                                                                                            season_type=self.season_type)
+
+        if self.season in self.config.version_inputs["season_type_generic"]:
+            season = self.season
+        else:
+            season = "{year}-{type}".format(year=self.season, type=self.season_type)
+
+        self.base_url = "https://www.mysportsfeeds.com/api/feed/pull/{sport}/{season}".format(sport=self.sport,
+                                                                                              season=season)
         return self.base_url
 
     def check_sport(self):
@@ -89,6 +95,29 @@ class BaseFeed():
         if self.season_type.lower() not in season_type:
             raise AssertionError("Apply valid season_type, accepts: {}".format(", ".join(x for x in season_type)))
 
+    def check_season(self):
+        raise_error = True
+        if self.season in self.config.version_inputs["season_type_generic"]:
+            raise_error = False
+        try:
+            year = int(self.season)
+            if year <= datetime.now().year:
+                raise_error = False
+
+        except ValueError:
+            years = self.season.split("-")
+            if len(years) == 2:
+                try:
+                    year1 = int(years[0])
+                    year2 = int(years[1])
+                    if year2-year1 == 1:
+                        raise_error = False
+                except ValueError:
+                    pass
+
+        if raise_error:
+            raise AttributeError("Incorrect format for season parameter")
+
     def save_feed(self, r):
         # Save to memory regardless of method
         if self.output_type.lower() == "json":
@@ -96,7 +125,8 @@ class BaseFeed():
         elif self.output_type.lower() == "xml":
             self.store.output = r.text
         elif self.output_type.lower() == "csv":
-            # TODO: add setting output for csv
+            self.store.output = r.content.split('\n')
+
             pass
         else:
             raise AssertionError("Requeted output type incorredt.  Check self.output_type")
@@ -104,9 +134,10 @@ class BaseFeed():
         if self.store.method == "standard":
             if not os.path.isdir("results"):
                 os.mkdir("results")
-
+            # TODO: correctly label file for team specific API calls
             filename = "{sport}-{feed}-{date}-{season_type}.{output_type}".format(sport=self.sport, feed=self.extension,
-                                                                                  date=self.date, season_type=self.season_type,
+                                                                                  date=self.config.params["fordate"],
+                                                                                  season_type=self.season_type,
                                                                                   output_type=self.output_type)
             with open(self.store.location + filename, "w") as outfile:
                 if isinstance(self.store.output, dict):
@@ -114,7 +145,12 @@ class BaseFeed():
 
                 elif isinstance(self.store.output, unicode):
                     outfile.write(self.store.output.encode("utf-8"))
-                # TODO: Add if statement for saving csv output
+
+                elif isinstance(self.store.output, list):
+                    writer = csv.writer(outfile)
+                    for row in self.store.output:
+                        writer.writerow([row])
+
                 else:
                     raise AssertionError("Could not interpret feed output format")
 
@@ -136,6 +172,7 @@ class BaseFeed():
 
             elif r.status_code == 304:
                 print "Data has not changed since last call"
+                # TODO: Load saved file if requested?
                 pass
             else:
                 print ("API call failed with error: {error}".format(error=r.status_code))
@@ -157,7 +194,7 @@ class BaseFeed():
 
 
 class Feed(BaseFeed):
-    def __init__(self, config, sport="nhl", season=datetime.now().year, season_type="regular", date=datetime.now().strftime("%Y%m%d"), output_type="json"):
+    def __init__(self, config, sport="nhl", season="current", season_type="regular", date=datetime.now().strftime("%Y%m%d"), output_type="json"):
         BaseFeed.__init__(self)
         self.config = config
         self.sport = sport
@@ -167,6 +204,7 @@ class Feed(BaseFeed):
         self.add_params({"fordate": date})
         self.date = self.check_date(date)
         self.check_season_type()
+        self.check_season()
         self.check_sport()
 
     def set_store(self, FeedStorageMethod):
@@ -203,7 +241,7 @@ class Feed(BaseFeed):
     def play_by_play(self, hometeam, awayteam, player_stats="none", team_stats="none"):
         self.add_params({"playerstats": player_stats,
                          "teamstats": team_stats,
-                         "game-id": "{date}-{away}-{home}".format(date=self.date, away=awayteam, home=hometeam)
+                         "gameid": "{date}-{away}-{home}".format(date=self.config.params["fordate"], away=awayteam, home=hometeam)
                          })
         self.make_url("game_playbyplay")
         self.make_call(self.base_url, self.url_ext)
@@ -211,7 +249,7 @@ class Feed(BaseFeed):
     def boxscore(self, hometeam, awayteam, player_stats="none", team_stats="none"):
         self.add_params({"playerstats": player_stats,
                          "teamstats": team_stats,
-                         "game-id": "{date}-{away}-{home}".format(date=self.date, away=awayteam, home=hometeam)
+                         "gameid": "{date}-{away}-{home}".format(date=self.config.params["fordate"], away=awayteam, home=hometeam)
                          })
         self.make_url("game_boxscore")
         self.make_call(self.base_url, self.url_ext)
