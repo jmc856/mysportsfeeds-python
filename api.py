@@ -34,11 +34,10 @@ class MsfLib:
                     print "connection ok with status code: {code}".format(code=r.status_code)
                     return
 
-            print "connection failed with status code: {code}".format(code=r.status_code)
-            return
+            raise Warning("connection failed with status code: {code}".format(code=r.status_code))
 
         except requests.exceptions.RequestException as e:
-            print "Failed due to error: {error}".format(error=e)
+            raise Warning("Failed due to error: {error}".format(error=e))
 
 
 class FeedStorageMethod():
@@ -80,7 +79,7 @@ class BaseFeed():
     def check_sport(self):
         sports = self.config.version_inputs["sports"]
         if self.sport.lower() not in sports:
-            raise AssertionError("Apply valid sport, accepts: {}".format(", ".join(x for x in sports)))
+            raise AttributeError("Apply valid sport, accepts: {}".format(", ".join(x for x in sports)))
     
     def check_date(self, date):
         try:
@@ -93,7 +92,7 @@ class BaseFeed():
     def check_season_type(self):
         season_type = self.config.version_inputs["season_type"]
         if self.season_type.lower() not in season_type:
-            raise AssertionError("Apply valid season_type, accepts: {}".format(", ".join(x for x in season_type)))
+            raise AttributeError("Apply valid season_type, accepts: {}".format(", ".join(x for x in season_type)))
 
     def check_season(self):
         raise_error = True
@@ -119,7 +118,7 @@ class BaseFeed():
             raise AttributeError("Incorrect format for season parameter")
 
     def save_feed(self, r):
-        # Save to memory regardless of method
+        # Save to memory regardless of selected method
         if self.output_type.lower() == "json":
             self.store.output = r.json()
         elif self.output_type.lower() == "xml":
@@ -129,7 +128,7 @@ class BaseFeed():
 
             pass
         else:
-            raise AssertionError("Requeted output type incorredt.  Check self.output_type")
+            raise AssertionError("Requeted output type incorrect.  Check self.output_type")
 
         if self.store.method == "standard":
             if not os.path.isdir("results"):
@@ -186,7 +185,7 @@ class BaseFeed():
             for key, value in data.items():
                 self.config.params[key] = value
         else:
-            print "Must add parameters as a dictionary"
+            raise TypeError("Must add parameters as a dictionary")
 
     def remove_params(self, data):
         for param in data:
