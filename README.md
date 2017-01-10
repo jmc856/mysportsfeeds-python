@@ -3,10 +3,11 @@
 
 #####Python wrapper for MySportsFeeds API
 ##Instructions
-####Set up
-Clone repo and build
+
+Clone repo
     
     $ git clone https://github.com/jmc856/mysportsfeeds-python.git
+
 Set API credentials 
 
     $ cd mysportsfeeds-python
@@ -33,23 +34,23 @@ Install requirements and run tests
 
 Create configuration object with API version as input parameter
 
-`config = MsfLib(version="1.0")`
+    config = MsfLib(version="1.0")
 
 Test connection at any time with:
 
-`config.test_connection()`
+    config.test_connection()
 
-Create storage object
+Create storage method
 
-`storage = FeedStorageMethod(config)`
+    storage = FeedStorageMethod(config)
 
 Create a feed 	
 
     feed = Feed(config, sport="nhl", season="current", season_type="regular", date=datetime.now().strftime("%Y%m%d"), output_type="json")
+ 
+ Note: For default params, the season/sport/season_type will not always correctly align to a working feed.  Although, `season="current"` or `season="latest"`**should** always pull a working feed.
+    
     feed.set_store(storage)
-Note: For default params, the season/sport/season_type will not always correctly align to a working feed.  Although, `season="current"` or `season="latest"` **should** always pull a working feed.
 
-Call a method to pull in data
 
-    feed.daily_game_schedule()
 This will temporarily store results in feed.store.output.  Depending on storage parameters selected, the data may be stored in `<your results location>`.
