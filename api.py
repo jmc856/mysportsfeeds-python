@@ -40,7 +40,7 @@ class MsfLib:
             raise Warning("Failed due to error: {error}".format(error=e))
 
 
-class FeedStorageMethod():
+class FeedStorageMethod:
     def __init__(self, config, method="standard"):
         self.location = config.store_location
         self.output = None
@@ -52,8 +52,8 @@ class FeedStorageMethod():
         self.method = method
 
 
-class BaseFeed():
-    def __init__(self):
+class BaseFeed:
+    def __init__(self, config=None, storage=None):
         self.sport = ""
         self.season = ""
         self.season_type = ""
@@ -62,16 +62,11 @@ class BaseFeed():
         self.url_ext = ""
         self.extension = ""
         self.date = ""
-        self.store = None
-        self.config = None
+        self.store = storage
+        self.config = config
 
     def make_base_url(self):
-
-        if self.season in self.config.version_inputs["season_type_generic"]:
-            season = self.season
-        else:
-            season = "{year}-{type}".format(year=self.season, type=self.season_type)
-
+        season = self.parse_season_type(self.season, self.season_type)
         self.base_url = "https://www.mysportsfeeds.com/api/feed/pull/{sport}/{season}".format(sport=self.sport,
                                                                                               season=season)
         return self.base_url
@@ -80,8 +75,17 @@ class BaseFeed():
         sports = self.config.version_inputs["sports"]
         if self.sport.lower() not in sports:
             raise AttributeError("Apply valid sport, accepts: {}".format(", ".join(x for x in sports)))
-    
-    def check_date(self, date):
+
+    def parse_season_type(self, season, season_type):
+        if season in self.config.version_inputs["season_type_generic"]:
+            season = season
+        else:
+            season = "{year}-{type}".format(year=season, type=season_type)
+
+        return season
+
+    @staticmethod
+    def check_date(date):
         try:
             date = parse(date).strftime("%Y%m%d")
         except:
@@ -117,6 +121,21 @@ class BaseFeed():
         if raise_error:
             raise AttributeError("Incorrect format for season parameter")
 
+    def make_output_filename(self):
+        season = self.parse_season_type(self.season, self.season_type)
+
+        extra_params = ["teamstats", "playerstats", "gameid"]
+        s = ""
+        for param in extra_params:
+            if self.config.params.get(param):
+                s += "-" + str(self.config.params.get(param))
+
+        filename = "{sport}-{feed}-{date}-{season}{s}.{output_type}".format(sport=self.sport, feed=self.extension,
+                                                                            date=self.config.params["fordate"],
+                                                                            season=season, s=s,
+                                                                            output_type=self.output_type)
+        return filename
+
     def save_feed(self, r):
         # Save to memory regardless of selected method
         if self.output_type.lower() == "json":
@@ -128,16 +147,14 @@ class BaseFeed():
 
             pass
         else:
-            raise AssertionError("Requeted output type incorrect.  Check self.output_type")
+            raise AssertionError("Requested output type incorrect.  Check self.output_type")
 
         if self.store.method == "standard":
             if not os.path.isdir("results"):
                 os.mkdir("results")
-            # TODO: correctly label file for team specific API calls
-            filename = "{sport}-{feed}-{date}-{season_type}.{output_type}".format(sport=self.sport, feed=self.extension,
-                                                                                  date=self.config.params["fordate"],
-                                                                                  season_type=self.season_type,
-                                                                                  output_type=self.output_type)
+
+            filename = self.make_output_filename()
+
             with open(self.store.location + filename, "w") as outfile:
                 if isinstance(self.store.output, dict):
                     json.dump(self.store.output, outfile)
@@ -171,10 +188,20 @@ class BaseFeed():
 
             elif r.status_code == 304:
                 print "Data has not changed since last call"
-                # TODO: Load saved file if requested?
-                pass
+                filename = self.make_output_filename()
+                # TODO: Add proper way to reload xml and csv into memory from file
+                with open(self.store.location + filename) as f:
+                    if self.output_type == "json":
+                        data = json.load(f)
+                    elif self.output_type == "xml":
+                        pass
+                    else:
+                        pass
+
+                self.store.output = data
+
             else:
-                print ("API call failed with error: {error}".format(error=r.status_code))
+                raise Warning("API call failed with error: {error}".format(error=r.status_code))
 
         except requests.exceptions.RequestException as e:
             print "Failed due to error: {error}".format(error=e)
@@ -206,8 +233,8 @@ class Feed(BaseFeed):
         self.check_season()
         self.check_sport()
 
-    def set_store(self, FeedStorageMethod):
-        self.store = FeedStorageMethod
+    def set_store(self, feed_storage_method):
+        self.store = feed_storage_method
 
     def make_url(self, extension):
         self.extension = extension
