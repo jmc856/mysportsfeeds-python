@@ -14,11 +14,15 @@ class MsfLib:
         self.auth = (config.get("Authentication", "username"), config.get("Authentication", "password"))
         self.params = {"Accept-Encoding": "gzip", "force": "false"}
         self.store_location = config.get("FileStore", "location")
-        self.version = version
 
-        with open("config/version_{version}.json".format(version=self.version)) as f:
+        with open("config/api_version_params.json") as f:
             data = json.loads(f.read())
-        self.version_inputs = data
+            if version in data.keys():
+                self.version = version
+                data_version = data[version]
+                self.version_inputs = data_version
+            else:
+                raise KeyError("This version is not supported.  Supported version: {}".format(", ".join(x for x in data.keys())))
 
     def test_connection(self, date=datetime.now().year, output="json"):
         sports = self.version_inputs["sports"]
@@ -77,12 +81,12 @@ class BaseFeed:
             raise AttributeError("Apply valid sport, accepts: {}".format(", ".join(x for x in sports)))
 
     def parse_season_type(self, season, season_type):
-        if season in self.config.version_inputs["season_type_generic"]:
+        if season.lower() in self.config.version_inputs["season_type_generic"]:
             season = season
         else:
             season = "{year}-{type}".format(year=season, type=season_type)
 
-        return season
+        return season.lower()
 
     @staticmethod
     def check_date(date):
@@ -113,7 +117,7 @@ class BaseFeed:
                 try:
                     year1 = int(years[0])
                     year2 = int(years[1])
-                    if year2-year1 == 1:
+                    if year2 - year1 == 1:
                         raise_error = False
                 except ValueError:
                     pass
@@ -124,13 +128,12 @@ class BaseFeed:
     def make_output_filename(self):
         season = self.parse_season_type(self.season, self.season_type)
 
-        extra_params = ["teamstats", "playerstats", "gameid"]
         s = ""
-        for param in extra_params:
+        for param in self.config.version_inputs["optional_params"]:
             if self.config.params.get(param):
                 s += "-" + str(self.config.params.get(param))
 
-        filename = "{sport}-{feed}-{date}-{season}{s}.{output_type}".format(sport=self.sport, feed=self.extension,
+        filename = "{sport}-{feed}-{date}-{season}{s}.{output_type}".format(sport=self.sport.lower(), feed=self.extension,
                                                                             date=self.config.params["fordate"],
                                                                             season=season, s=s,
                                                                             output_type=self.output_type)
@@ -208,9 +211,10 @@ class BaseFeed:
 
     def add_params(self, data):
         if isinstance(data, dict):
-            data["Accept-Encoding"] = "gzip"  # Should always include this
+            data["accept-encoding"] = "gzip"  # Should always include this
             for key, value in data.items():
-                self.config.params[key] = value
+                if data.get(key):
+                    self.config.params[key.lower()] = value.lower()
         else:
             raise TypeError("Must add parameters as a dictionary")
 
@@ -223,10 +227,10 @@ class Feed(BaseFeed):
     def __init__(self, config, sport="nhl", season="current", season_type="regular", date=datetime.now().strftime("%Y%m%d"), output_type="json"):
         BaseFeed.__init__(self)
         self.config = config
-        self.sport = sport
-        self.season = season
-        self.season_type = season_type
-        self.output_type = output_type
+        self.sport = sport.lower()
+        self.season = season.lower()
+        self.season_type = season_type.lower()
+        self.output_type = output_type.lower()
         self.add_params({"fordate": date})
         self.date = self.check_date(date)
         self.check_season_type()
@@ -255,7 +259,7 @@ class Feed(BaseFeed):
         self.make_url("daily_game_schedule")
         self.make_call(self.base_url, self.url_ext)
 
-    def daily_player_stats(self, player_stats="none"):
+    def daily_player_stats(self, player_stats=None):
         self.add_params({"playerstats": player_stats})
         self.make_url("daily_player_stats")
         self.make_call(self.base_url, self.url_ext)
@@ -264,7 +268,7 @@ class Feed(BaseFeed):
         self.make_url("scoreboard")
         self.make_call(self.base_url, self.url_ext)
 
-    def play_by_play(self, hometeam, awayteam, player_stats="none", team_stats="none"):
+    def play_by_play(self, hometeam, awayteam, player_stats=None, team_stats=None):
         self.add_params({"playerstats": player_stats,
                          "teamstats": team_stats,
                          "gameid": "{date}-{away}-{home}".format(date=self.config.params["fordate"], away=awayteam, home=hometeam)
@@ -272,7 +276,7 @@ class Feed(BaseFeed):
         self.make_url("game_playbyplay")
         self.make_call(self.base_url, self.url_ext)
 
-    def boxscore(self, hometeam, awayteam, player_stats="none", team_stats="none"):
+    def boxscore(self, hometeam, awayteam, player_stats=None, team_stats=None):
         self.add_params({"playerstats": player_stats,
                          "teamstats": team_stats,
                          "gameid": "{date}-{away}-{home}".format(date=self.config.params["fordate"], away=awayteam, home=hometeam)
@@ -288,22 +292,22 @@ class Feed(BaseFeed):
         self.make_url("active_players")
         self.make_call(self.base_url, self.url_ext)
 
-    def overall_standings(self, team_stats="none"):
+    def overall_standings(self, team_stats=None):
         self.add_params({"teamstats": team_stats})
         self.make_url("overall_team_standings")
         self.make_call(self.base_url, self.url_ext)
 
-    def conf_standings(self, team_stats="none"):
+    def conf_standings(self, team_stats=None):
         self.add_params({"teamstats": team_stats})
         self.make_url("conference_team_standings")
         self.make_call(self.base_url, self.url_ext)
 
-    def division_standings(self, team_stats="none"):
+    def division_standings(self, team_stats=None):
         self.add_params({"teamstats": team_stats})
         self.make_url("division_team_standings")
         self.make_call(self.base_url, self.url_ext)
 
-    def playoff_standings(self, team_stats="none"):
+    def playoff_standings(self, team_stats=None):
         self.add_params({"teamstats": team_stats})
         self.make_url("playoff_team_standings")
         self.make_call(self.base_url, self.url_ext)

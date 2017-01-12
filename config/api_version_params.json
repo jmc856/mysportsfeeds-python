@@ -1,0 +1,13 @@
+{
+  "1.0": {
+  "sports": ["nhl", "nba", "nfl", "mlb"],
+  "season_type": ["regular", "playoff"],
+  "season_type_generic": ["current", "latest"],
+  "storage": ["standard", "memory"],
+  "teamstats:": [],
+  "playerstats": [],
+  "optional_params": ["teamstats", "playerstats", "gameid"]
+  },
+
+  "1.1": {}
+}
