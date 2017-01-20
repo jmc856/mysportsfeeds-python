@@ -58,11 +58,12 @@ def test_make_output_file_name(config):
 
 
 def test_add_remove_params(base):
-    base.config.params = {}
     base.add_params({"random": "param"})
-    assert base.config.params == {"accept-encoding": "gzip", "random": "param"}
+    assert base.config.params == {"accept-encoding": "gzip", "force": "false", "random": "param", }
     base.remove_params({"accept-encoding": "gzip"})
-    assert base.config.params == {"random": "param"}
+    assert base.config.params == {"force": "false", "random": "param"}
+    base.toggle_force()
+    assert base.config.params == {"force": "true", "random": "param"}
 
 
 def test_parse_season_type(base):
