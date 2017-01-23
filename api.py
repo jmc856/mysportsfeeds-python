@@ -148,14 +148,14 @@ class BaseFeed:
             elif r.status_code == 304:
                 print "Data has not changed since last call"
                 filename = self.make_output_filename()
-                # TODO: Add proper way to reload xml and csv into memory from file
+
                 with open(self.store.location + filename) as f:
                     if self.output_type == "json":
                         data = json.load(f)
                     elif self.output_type == "xml":
-                        pass
+                        data = str(f.readlines()[0])
                     else:
-                        pass
+                        data = f.read().splitlines()
 
                 self.store.output = data
 
@@ -183,13 +183,13 @@ class BaseFeed:
             filename = self.make_output_filename()
 
             with open(self.store.location + filename, "w") as outfile:
-                if isinstance(self.store.output, dict):
+                if isinstance(self.store.output, dict):  # This is JSON
                     json.dump(self.store.output, outfile)
 
-                elif isinstance(self.store.output, unicode):
-                    outfile.write(self.store.output.encode("utf-8"))
+                elif isinstance(self.store.output, unicode):  # This is xml
+                    outfile.write(self.store.output.encode("u tf-8"))
 
-                elif isinstance(self.store.output, list):
+                elif isinstance(self.store.output, list):  # This is csv
                     writer = csv.writer(outfile)
                     for row in self.store.output:
                         writer.writerow([row])
