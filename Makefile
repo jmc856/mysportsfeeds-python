@@ -12,5 +12,3 @@ install: ;@echo "Installing ${PROJECT} Dependencies....."; \
 
 test: ;@echo "Testing ${PROJECT}....."; \
 	pytest -q tests/tests.py
-
-yh
