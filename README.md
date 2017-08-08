@@ -24,7 +24,7 @@ Change `config.ini` to include your username & login from MySportsFeeds.com
 Set storage location of API feeds (default is `results/`)
 
     [FileStore]
-    location <your results location>
+    location: <your results location>
     
 Install requirements and run tests
 
