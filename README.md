@@ -1,8 +1,9 @@
 # MySportsFeeds Wrapper - Python
 ![alt](https://pbs.twimg.com/profile_images/779390458892001280/aFHAsc24.jpg)
 
-#####Python wrapper for MySportsFeeds API
-##Instructions
+
+##### Python wrapper for MySportsFeeds API
+## Instructions
 
 Clone repo
     
