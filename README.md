@@ -3,16 +3,10 @@
 
 
 ##### Python wrapper for MySportsFeeds API
-## Instructions
+## Setup
 
-Clone repo
-    
-    $ git clone https://github.com/jmc856/mysportsfeeds-python.git
 
-Set API credentials 
-
-    $ cd mysportsfeeds-python
-    $ nano config/config.ini
+#### Set API credentials
     
 If you haven't signed up for API access, do so here [https://www.mysportsfeeds.com/index.php/register/](https://www.mysportsfeeds.com/index.php/register/)
     
