@@ -31,7 +31,7 @@ Install requirements and run tests
 
     $ make build
 
-##Usage
+## Usage
 
 Create configuration object with API version as input parameter
 
